@@ -1,0 +1,34 @@
+{
+    "cipok": [
+        {
+            "nev": "Martens",
+            "kiadas": "2010.03.08",
+            "eladva": 30,
+            "elerheto": true
+        },
+        {
+            "nev": "Converse",
+            "kiadas": "2015.06.15",
+            "eladva": 25,
+            "elerheto": false
+        },
+        {
+            "nev": "Nike",
+            "kiadas": "2018.11.20",
+            "eladva": 40,
+            "elerheto": true
+        },
+        {
+            "nev": "Adidas",
+            "kiadas": "2019.04.12",
+            "eladva": 35,
+            "elerheto": true
+        },
+        {
+            "nev": "Vans",
+            "kiadas": "2021.09.05",
+            "eladva": 18,
+            "elerheto": false
+        }
+    ]
+}
