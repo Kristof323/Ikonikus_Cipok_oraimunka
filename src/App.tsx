@@ -17,6 +17,7 @@ const uresCipo: NewShoe = {
 function App() {
   const [cipok, setCipok] = useState<Shoe[]>([]);
   const [ujCipo, setUjCipo] = useState<NewShoe>(uresCipo);
+  const [szerkesztendoCipo, setSzerkesztendoCipo] = useState<Shoe | null>(null);
   const [betoltes, setBetoltes] = useState(true);
   const [hiba, setHiba] = useState("");
   const [siker, setSiker] = useState("");
@@ -35,11 +36,7 @@ function App() {
       const adatok: Shoe[] = await valasz.json();
       setCipok(adatok);
     } catch (error) {
-      setHiba(
-        error instanceof Error
-          ? error.message
-          : "Váratlan hiba történt az adatok betöltése közben.",
-      );
+      setHiba(error instanceof Error ? error.message : "Váratlan hiba történt.");
     } finally {
       setBetoltes(false);
     }
@@ -53,11 +50,13 @@ function App() {
     esemeny: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value, type } = esemeny.target;
+    const ertek = type === "number" ? Number(value) : value;
 
-    setUjCipo((elozo) => ({
-      ...elozo,
-      [name]: type === "number" ? Number(value) : value,
-    }));
+    if (szerkesztendoCipo) {
+      setSzerkesztendoCipo({ ...szerkesztendoCipo, [name]: ertek });
+    } else {
+      setUjCipo({ ...ujCipo, [name]: ertek });
+    }
   };
 
   const cipoMentese = async (esemeny: FormEvent<HTMLFormElement>) => {
@@ -66,29 +65,56 @@ function App() {
     setSiker("");
 
     try {
-      const valasz = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const valasz = await fetch(
+        szerkesztendoCipo ? `${API_URL}/${szerkesztendoCipo.id}` : API_URL,
+        {
+          method: szerkesztendoCipo ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(szerkesztendoCipo ?? ujCipo),
         },
-        body: JSON.stringify(ujCipo),
-      });
+      );
 
       if (!valasz.ok) {
-        throw new Error("Az új cipő mentése nem sikerült.");
+        throw new Error(
+          szerkesztendoCipo
+            ? "A cipő módosítása nem sikerült."
+            : "Az új cipő mentése nem sikerült.",
+        );
       }
 
+      setSiker(
+        szerkesztendoCipo
+          ? "A cipő sikeresen módosítva!"
+          : "A cipő sikeresen hozzáadva!",
+      );
+
       setUjCipo(uresCipo);
-      setSiker("A cipő sikeresen hozzáadva!");
+      setSzerkesztendoCipo(null);
       await cipokBetoltese();
     } catch (error) {
-      setHiba(
-        error instanceof Error
-          ? error.message
-          : "Váratlan hiba történt a mentés közben.",
-      );
+      setHiba(error instanceof Error ? error.message : "Váratlan hiba történt.");
     }
   };
+
+  const cipoTorlese = async (id: number) => {
+    setHiba("");
+    setSiker("");
+
+    try {
+      const valasz = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+
+      if (!valasz.ok) {
+        throw new Error("A cipő törlése nem sikerült.");
+      }
+
+      setSiker("A cipő sikeresen törölve!");
+      await cipokBetoltese();
+    } catch (error) {
+      setHiba(error instanceof Error ? error.message : "Váratlan hiba történt.");
+    }
+  };
+
+  const aktivCipo = szerkesztendoCipo ?? ujCipo;
 
   return (
     <div className="alkalmazas">
@@ -102,17 +128,8 @@ function App() {
       </header>
 
       <main className="container py-5">
-        {hiba && (
-          <div className="alert alert-danger" role="alert">
-            {hiba}
-          </div>
-        )}
-
-        {siker && (
-          <div className="alert alert-success" role="alert">
-            {siker}
-          </div>
-        )}
+        {hiba && <div className="alert alert-danger">{hiba}</div>}
+        {siker && <div className="alert alert-success">{siker}</div>}
 
         <section className="row g-4">
           <div className="col-lg-8">
@@ -129,11 +146,7 @@ function App() {
                 {cipok.map((cipo) => (
                   <div className="col-md-6" key={cipo.id}>
                     <article className="card cipo-kartya h-100 shadow-sm">
-                      <img
-                        src={cipo.kep}
-                        alt={`${cipo.marka} ${cipo.nev}`}
-                        className="card-img-top cipo-kep"
-                      />
+                      <img src={cipo.kep} alt={cipo.nev} className="card-img-top cipo-kep" />
 
                       <div className="card-body d-flex flex-column">
                         <div className="d-flex justify-content-between align-items-start">
@@ -152,6 +165,22 @@ function App() {
                             {new Date(cipo.kiadasDatuma).toLocaleDateString("hu-HU")}
                           </span>
                         </div>
+
+                        <div className="d-flex gap-2 mt-3">
+                          <button
+                            className="btn btn-outline-primary btn-sm flex-grow-1"
+                            onClick={() => setSzerkesztendoCipo(cipo)}
+                          >
+                            Szerkesztés
+                          </button>
+
+                          <button
+                            className="btn btn-outline-danger btn-sm flex-grow-1"
+                            onClick={() => cipoTorlese(cipo.id)}
+                          >
+                            Törlés
+                          </button>
+                        </div>
                       </div>
                     </article>
                   </div>
@@ -163,95 +192,83 @@ function App() {
           <div className="col-lg-4">
             <div className="card shadow-sm h-100">
               <div className="card-body">
-                <h2 className="h4 mb-4">Új cipő felvétele</h2>
+                <h2 className="h4 mb-4">
+                  {szerkesztendoCipo ? "Cipő módosítása" : "Új cipő felvétele"}
+                </h2>
 
                 <form onSubmit={cipoMentese}>
                   <div className="mb-3">
-                    <label htmlFor="nev" className="form-label">
-                      Név
-                    </label>
+                    <label className="form-label" htmlFor="nev">Név</label>
                     <input
                       id="nev"
                       name="nev"
-                      type="text"
                       className="form-control"
-                      value={ujCipo.nev}
+                      value={aktivCipo.nev}
                       onChange={urlapValtozas}
                       required
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="marka" className="form-label">
-                      Márka
-                    </label>
+                    <label className="form-label" htmlFor="marka">Márka</label>
                     <input
                       id="marka"
                       name="marka"
-                      type="text"
                       className="form-control"
-                      value={ujCipo.marka}
+                      value={aktivCipo.marka}
                       onChange={urlapValtozas}
                       required
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="kiadasDatuma" className="form-label">
-                      Kiadás dátuma
-                    </label>
+                    <label className="form-label" htmlFor="kiadasDatuma">Kiadás dátuma</label>
                     <input
                       id="kiadasDatuma"
                       name="kiadasDatuma"
                       type="date"
                       className="form-control"
-                      value={ujCipo.kiadasDatuma}
+                      value={aktivCipo.kiadasDatuma}
                       onChange={urlapValtozas}
                       required
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="ar" className="form-label">
-                      Ár (Ft)
-                    </label>
+                    <label className="form-label" htmlFor="ar">Ár (Ft)</label>
                     <input
                       id="ar"
                       name="ar"
                       type="number"
                       min="0"
                       className="form-control"
-                      value={ujCipo.ar}
+                      value={aktivCipo.ar}
                       onChange={urlapValtozas}
                       required
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="kep" className="form-label">
-                      Kép URL
-                    </label>
+                    <label className="form-label" htmlFor="kep">Kép URL</label>
                     <input
                       id="kep"
                       name="kep"
                       type="url"
                       className="form-control"
-                      value={ujCipo.kep}
+                      value={aktivCipo.kep}
                       onChange={urlapValtozas}
                       required
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="leiras" className="form-label">
-                      Leírás
-                    </label>
+                    <label className="form-label" htmlFor="leiras">Leírás</label>
                     <textarea
                       id="leiras"
                       name="leiras"
-                      className="form-control"
                       rows={3}
-                      value={ujCipo.leiras}
+                      className="form-control"
+                      value={aktivCipo.leiras}
                       onChange={urlapValtozas}
                       required
                     />
@@ -264,22 +281,37 @@ function App() {
                       role="switch"
                       id="kollekcios"
                       name="kollekcios"
-                      checked={ujCipo.kollekcios}
-                      onChange={(esemeny) =>
-                        setUjCipo((elozo) => ({
-                          ...elozo,
-                          kollekcios: esemeny.target.checked,
-                        }))
-                      }
+                      checked={aktivCipo.kollekcios}
+                      onChange={(esemeny) => {
+                        const ertek = esemeny.target.checked;
+
+                        if (szerkesztendoCipo) {
+                          setSzerkesztendoCipo({ ...szerkesztendoCipo, kollekcios: ertek });
+                        } else {
+                          setUjCipo({ ...ujCipo, kollekcios: ertek });
+                        }
+                      }}
                     />
                     <label className="form-check-label" htmlFor="kollekcios">
                       Kollekciós darab
                     </label>
                   </div>
 
-                  <button type="submit" className="btn btn-dark w-100">
-                    Cipő hozzáadása
-                  </button>
+                  <div className="d-grid gap-2">
+                    <button type="submit" className="btn btn-dark">
+                      {szerkesztendoCipo ? "Módosítás mentése" : "Cipő hozzáadása"}
+                    </button>
+
+                    {szerkesztendoCipo && (
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={() => setSzerkesztendoCipo(null)}
+                      >
+                        Mégse
+                      </button>
+                    )}
+                  </div>
                 </form>
               </div>
             </div>
