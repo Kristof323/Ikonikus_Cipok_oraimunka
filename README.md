@@ -1,32 +1,47 @@
-# React + TypeScript + Vite
+# Ikonikus cipők
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Ez egy React + TypeScript alapú webalkalmazás, amely ikonikus cipőket jelenít meg. Az adatokat a **json-server** szolgálja ki, az új cipők felvételéhez **POST** kérés használható, a megjelenést pedig a **Bootstrap** biztosítja.
 
-Currently, two official plugins are available:
+## Funkciók
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Legalább 5 cipő adata egy JSON-adatbázisban
+- String, number, boolean és date típusú mezők
+- Cipők listázása `GET` kéréssel
+- Új cipő felvétele űrlapon keresztül `POST` kéréssel
+- Sikeres mentés után a lista automatikusan frissül
+- Reszponzív, Bootstrap-alapú megjelenés
 
-## React Compiler
+## Telepítés
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+```
 
-## Expanding the Oxlint configuration
+## Futtatás
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Nyiss két terminált:
+
+```bash
+# 1. terminál: JSON szerver
+npm run json-server
+
+# 2. terminál: React alkalmazás
+npm run dev
+```
+
+A json-server a `http://localhost:3000/cipok` végponton érhető el, a React alkalmazás pedig általában a `http://localhost:5173` címen nyílik meg.
+
+## Adatszerkezet
 
 ```json
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  "id": 1,
+  "nev": "Air Jordan 1",
+  "marka": "Nike",
+  "kiadasDatuma": "1985-04-01",
+  "ar": 28990,
+  "kollekcios": true,
+  "kep": "https://...",
+  "leiras": "..."
 }
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
